@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Feliz Cumple, Mamá ❤️</title>
+  <style>
+    :root{
+      --bg1: #FFF0F5; /* lavender blush */
+      --bg2: #F0FFF4; /* honeydew */
+      --accent: #FFD1DC; /* pastel pink */
+      --soft: #FFF7E6; /* pastel yellow */
+      --text: #4a3f35;
+      --card: rgba(255,255,255,0.7);
+    }
+    html,body{height:100%;margin:0;font-family: 'Segoe UI', Roboto, Helvetica, Arial; color:var(--text)}
+    body{
+      background: radial-gradient(circle at 10% 10%, var(--bg1), transparent 20%),
+                  radial-gradient(circle at 90% 90%, var(--bg2), transparent 20%),
+                  linear-gradient(135deg, #FFFDF8, #FFFBFF);
+      overflow:hidden;
+    }
+
+    header{position:fixed;left:50%;transform:translateX(-50%);top:18px;z-index:1000;text-align:center}
+    .title-card{background:var(--card);backdrop-filter: blur(6px);padding:14px 22px;border-radius:18px;box-shadow:0 8px 30px rgba(80,30,60,0.08)}
+    .title-card h1{margin:0;font-size:20px;letter-spacing:0.6px}
+    .title-card p{margin:6px 0 0;font-size:13px;color:#6b5a56}
+
+    /* contenedor de corazones */
+    .sky{position:fixed;inset:0;pointer-events:none;}
+    .heart-btn{position:absolute;width:110px;height:110px;pointer-events:auto;cursor:pointer;filter:drop-shadow(0 6px 14px rgba(80,20,50,0.12));transition:transform .22s ease}
+    .heart-btn:active{transform:scale(.95)}
+
+    /* estilo del modal de frase */
+    .modal{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(5,5,5,0.18);z-index:2000;opacity:0;pointer-events:none;transition:opacity .18s}
+    .modal.show{opacity:1;pointer-events:auto}
+    .card{background:linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,255,255,0.95));padding:22px;border-radius:14px;max-width:560px;margin:16px;box-shadow:0 12px 40px rgba(30,10,30,0.12);text-align:center}
+    .card h2{margin:0 0 8px;font-size:20px}
+    .card p{margin:0 0 14px;font-size:16px;line-height:1.4}
+    .close-btn{display:inline-block;padding:8px 14px;border-radius:10px;background:var(--accent);border:none;font-weight:600;cursor:pointer}
+
+    /* Keyframes: caída y oscilación */
+    @keyframes fall {
+      0%{transform: translateY(-120vh) rotate(0deg) scale(.9);opacity:0}
+      6%{opacity:1}
+      100%{transform: translateY(120vh) rotate(360deg) scale(1);opacity:1}
+    }
+
+    /* responsive */
+    @media (max-width:520px){
+      .heart-btn{width:84px;height:84px}
+      .card{padding:16px}
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title-card">
+      <h1>Feliz cumpleaños, Mamá 🎂🌸</h1>
+      <p>Haz clic en los corazones para ver un mensaje especial — cada vez será diferente.</p>
+    </div>
+  </header>
+
+  <!-- contenedor donde los corazones caerán -->
+  <div id="sky" class="sky" aria-hidden="false"></div>
+
+  <!-- modal para mostrar frase -->
+  <div id="modal" class="modal" role="dialog" aria-modal="true">
+    <div class="card">
+      <h2>Para ti, Mamá</h2>
+      <p id="message">¡Eres la mejor mamá del mundo!</p>
+      <button id="close" class="close-btn">Cerrar</button>
+    </div>
+  </div>
+
+  <script>
+    // LISTA DE 24 FRASES (en español) - puedes editar o agregar
+    const frases = [
+      "Mamá, tu amor es el regalo que ilumina mis días.",
+      "Gracias por cada abrazo, cada consejo y cada sonrisa.",
+      "Eres mi ejemplo de fuerza y ternura. Te quiero infinito.",
+      "Tu corazón hace del hogar el lugar más feliz.",
+      "Por tu paciencia, tu calma y tu risa contagiosa, gracias.",
+      "Eres la artista que pintó mi vida con colores hermosos.",
+      "Contigo aprendí a ser valiente y a creer en mis sueños.",
+      "Tu cariño es la luz que siempre me guía en la oscuridad.",
+      "Si tuviera que elegir de nuevo, te elegiría a ti, mamá.",
+      "Hoy celebramos tu vida y todo lo que nos das cada día.",
+      "Tu abrazo es mi lugar favorito en el mundo.",
+      "Eres la razón de muchas de mis sonrisas.",
+      "Gracias por creer en mí incluso cuando yo dudé.",
+      "Eres mi primer hogar, mi refugio y mi paz.",
+      "Tu voz calma mis miedos y llena mi vida de esperanza.",
+      "Gracias por enseñarme con amor, no con imposiciones.",
+      "Eres una flor que siempre florece con amor y fuerza.",
+      "Tu bondad transforma días comunes en recuerdos preciosos.",
+      "Mamá, contigo aprendí el valor de los pequeños detalles.",
+      "Hoy te abrazo con palabras: te quiero, te admiro, te celebro.",
+      "Eres mi cómplice, mi guía y mi amiga más querida.",
+      "Tu sacrificio y cariño se ven en todo lo que soy.",
+      "La vida a tu lado es un regalo que agradezco cada día.",
+      "Que este cumpleaños esté lleno de amor, risas y paz."
+    ];
+
+    // 12 imágenes de ejemplo (puedes reemplazar por tus propias imágenes)
+    const images = Array.from({length:12}).map((_,i)=> `https://picsum.photos/seed/mama${i+1}/300/300`);
+
+    const sky = document.getElementById('sky');
+    const modal = document.getElementById('modal');
+    const messageP = document.getElementById('message');
+    const closeBtn = document.getElementById('close');
+
+    // genera corazones (SVG) y los anima
+    for(let i=0;i<12;i++){
+      const el = document.createElement('button');
+      el.className = 'heart-btn';
+      el.style.left = Math.random()*92 + '%';
+
+      // size tweaking
+      const size = 80 + Math.floor(Math.random()*60); // 80 - 140
+      el.style.width = size + 'px';
+      el.style.height = size + 'px';
+
+      // animation duration & delay random
+      const dur = 9 + Math.random()*10; // 9s - 19s
+      const delay = -Math.random()*dur; // negative so they start at random heights
+      el.style.animation = `fall ${dur}s linear infinite`;
+      el.style.animationDelay = `${delay}s`;
+
+      // create SVG heart with image inside
+      const svgNS = 'http://www.w3.org/2000/svg';
+      const svg = document.createElementNS(svgNS,'svg');
+      svg.setAttribute('viewBox','0 0 100 100');
+      svg.setAttribute('width','100%');
+      svg.setAttribute('height','100%');
+
+      // define path for heart
+      const path = document.createElementNS(svgNS,'path');
+      path.setAttribute('d','M50 86 L15 52 A18 18 0 0 1 27 18 A24 22 0 0 1 50 34 A24 22 0 0 1 73 18 A18 18 0 0 1 85 52 Z');
+      path.setAttribute('id',`heartPath${i}`);
+      // create clipPath to clip the image into heart shape
+      const clip = document.createElementNS(svgNS,'clipPath');
+      clip.setAttribute('id',`clip${i}`);
+      const usePath = path.cloneNode(true);
+      clip.appendChild(usePath);
+      svg.appendChild(clip);
+
+      // image inside svg clipped to heart
+      const img = document.createElementNS(svgNS,'image');
+      img.setAttribute('href', images[i]);
+      img.setAttribute('x','0');
+      img.setAttribute('y','0');
+      img.setAttribute('width','100');
+      img.setAttribute('height','100');
+      img.setAttribute('preserveAspectRatio','xMidYMid slice');
+      img.setAttribute('clip-path',`url(#clip${i})`);
+      svg.appendChild(img);
+
+      // add a subtle stroke heart outline on top
+      const outline = document.createElementNS(svgNS,'path');
+      outline.setAttribute('d',usePath.getAttribute('d'));
+      outline.setAttribute('fill','none');
+      outline.setAttribute('stroke','rgba(255,255,255,0.6)');
+      outline.setAttribute('stroke-width','3');
+      outline.setAttribute('vector-effect','non-scaling-stroke');
+      svg.appendChild(outline);
+
+      el.appendChild(svg);
+
+      // click handler: show a random phrase
+      el.addEventListener('click', (ev)=>{
+        ev.stopPropagation();
+        const frase = frases[Math.floor(Math.random()*frases.length)];
+        messageP.textContent = frase;
+        modal.classList.add('show');
+      });
+
+      // small horizontal oscillation using JS animation for each heart
+      const amplitude = 20 + Math.random()*30;
+      let t = Math.random()*1000;
+      function sway(){
+        t += 0.02 + Math.random()*0.02;
+        const x = Math.sin(t + i) * amplitude;
+        el.style.transform = `translateX(${x}px)`;
+        requestAnimationFrame(sway);
+      }
+      requestAnimationFrame(sway);
+
+      sky.appendChild(el);
+    }
+
+    // cerrar modal
+    closeBtn.addEventListener('click', ()=> modal.classList.remove('show'));
+    modal.addEventListener('click',(e)=>{ if(e.target===modal) modal.classList.remove('show') });
+
+    // accesibilidad: cerrar con ESC
+    document.addEventListener('keydown',(e)=>{ if(e.key==='Escape') modal.classList.remove('show') });
+
+    // SUGERENCIA: para reemplazar imágenes, cambia el arreglo "images" por URLs de tus fotos.
+  </script>
+</body>
+</html>
